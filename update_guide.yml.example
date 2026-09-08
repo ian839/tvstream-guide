@@ -1,0 +1,33 @@
+name: Update UK TV Guide
+
+on:
+  schedule:
+    # Run once daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build-guide:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate compact guide JSON
+        run: |
+          python scripts/generate_uk_guide.py uk_guide.json
+
+      - name: Commit and push updated guide
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add uk_guide.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Automated daily UK guide update [skip ci]" && git push)
