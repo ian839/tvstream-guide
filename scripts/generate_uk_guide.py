@@ -3,9 +3,10 @@
 generate_uk_guide.py
 --------------------
 Automated generator for TVStream Live's lightweight public TV guide feed.
-Fetches the public UK Freeview XMLTV feed, filters down to the channels
-used by Master TV Guide and AppHub, trims to a rolling 36-hour window,
-and outputs a compact JSON file (<100 KB) suitable for fast Apple TV loading.
+Fetches public UK XMLTV feeds (Freeview and OpenEPG for sports channels),
+filters down to the channels used by Master TV Guide, AppHub, NOW TV, and Max,
+trims to a rolling 36-hour window, and outputs a compact JSON file
+suitable for fast Apple TV loading.
 
 Dependencies: Standard Python library only (urllib, gzip, xml.etree, json, datetime).
 """
@@ -14,18 +15,32 @@ import sys
 import os
 import json
 import gzip
+import io
 import urllib.request
 from datetime import datetime, timezone, timedelta
 import xml.etree.ElementTree as ET
 
-# Source XMLTV feed (updated every 12 hours with 7 days of UK Freeview schedules)
-XMLTV_URL = "https://raw.githubusercontent.com/dp247/Freeview-EPG/master/epg.xml"
+# Source XMLTV feeds
+FEEDS = [
+    ("Freeview", "https://raw.githubusercontent.com/dp247/Freeview-EPG/master/epg.xml"),
+    ("OpenEPG", "https://www.open-epg.com/files/unitedkingdom2.xml")
+]
+
+# Simulcast UHD channels absent from both XMLTV feeds above. epg.pw exposes
+# these schedules through a public, unauthenticated per-channel JSON API.
+# IDs are epg.pw channel IDs, not NOW TV service_key values.
+EPG_PW_CHANNELS = {
+    "sky sports uhd1": 471315,
+    "sky sports uhd2": 471314,
+    "tnt sports ultimate": 400476,
+}
 
 # Output filename
 OUTPUT_FILE = sys.argv[1] if len(sys.argv) > 1 else "uk_guide.json"
 
 # Canonical channels and their search aliases
 TARGET_CHANNELS = {
+    # Freeview terrestrial
     "bbc one": ["bbc one", "bbc 1", "bbcone"],
     "bbc two": ["bbc two", "bbc 2", "bbctwo"],
     "itv1": ["itv1", "itv 1", "itv hd"],
@@ -50,6 +65,41 @@ TARGET_CHANNELS = {
     "bbc scotland": ["bbc scotland"],
     "bbc alba": ["bbc alba"],
     "bbc parliament": ["bbc parliament"],
+
+    # Ireland — Saorview
+    "rte one": ["rteone", "rté one", "rte one"],
+    "rte two": ["rte2", "rté2", "rte two"],
+    "rte news": ["rtenews", "rté news"],
+    "virgin media one": ["virginmediaone", "virgin media one"],
+    "virgin media two": ["virginmediatwo", "virgin media two"],
+    "virgin media three": ["virginmediathree", "virgin media three"],
+    "tg4": ["tg4"],
+
+    # TNT Sports (Max / discovery+ / NOW TV)
+    "tnt sports 1": ["tnt sports 1", "tnt sport 1", "bt sport 1", "bt sports 1"],
+    "tnt sports 2": ["tnt sports 2", "tnt sport 2", "bt sport 2", "bt sports 2"],
+    "tnt sports 3": ["tnt sports 3", "tnt sport 3", "bt sport 3", "bt sports 3"],
+    "tnt sports 4": ["tnt sports 4", "tnt sport 4", "bt sport 4", "bt sports 4"],
+    "tnt sports ultimate": ["tnt sports ultimate", "tnt sport ultimate", "tnt sports uhd", "tnt sport uhd", "tnt sports uhd 4k"],
+
+    # Sky Sports (NOW TV)
+    "sky sports main event": ["sky sports main event", "sky sport main event"],
+    "sky sports premier league": ["sky sports premier league", "sky sport premier league", "sky sports pl", "sky sport pl"],
+    "sky sports football": ["sky sports football", "sky sport football"],
+    "sky sports cricket": ["sky sports cricket", "sky sport cricket"],
+    "sky sports golf": ["sky sports golf", "sky sport golf"],
+    "sky sports f1": ["sky sports f1", "sky sport f1", "sky sports formula 1"],
+    "sky sports tennis": ["sky sports tennis", "sky sport tennis"],
+    "sky sports action": ["sky sports action", "sky sport action"],
+    "sky sports+": ["sky sports +", "sky sports+", "sky sport +", "sky sport plus", "sky sports plus"],
+    "sky sports racing": ["sky sports racing", "sky sport racing", "at the races"],
+    "sky sports mix": ["sky sports mix", "sky sport mix"],
+    "sky sports uhd1": ["sky sports uhd1", "sky sports uhd 1", "sky sport uhd1", "sky sport uhd 1"],
+    "sky sports uhd2": ["sky sports uhd2", "sky sports uhd 2", "sky sport uhd2", "sky sport uhd 2"],
+
+    # Premier Sports
+    "premier sports 1": ["premier sports 1", "premier sport 1"],
+    "premier sports 2": ["premier sports 2", "premier sport 2"],
 }
 
 def parse_xmltv_date(raw_str):
@@ -71,88 +121,135 @@ def parse_xmltv_date(raw_str):
             return dt.replace(tzinfo=tz_offset).astimezone(timezone.utc)
         else:
             return datetime.strptime(cleaned[:14], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
-    except Exception as e:
+    except Exception:
         return None
+
+def fetch_feed(name, url):
+    print(f"Fetching XMLTV feed '{name}' from: {url}")
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "TVStreamLive-GuideBuilder/1.0 (Macintosh; AppleTV)"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=45) as response:
+            compressed_data = response.read()
+        try:
+            return gzip.decompress(compressed_data)
+        except Exception:
+            return compressed_data
+    except Exception as e:
+        print(f"Warning: Error fetching feed '{name}': {e}", file=sys.stderr)
+        return None
+
+
+def fetch_epg_pw_channel(canonical_name, channel_id, window_start, window_end):
+    """Fetch a public epg.pw schedule and normalize it to guide programmes."""
+    url = f"https://epg.pw/api/epg.json?channel_id={channel_id}"
+    req = urllib.request.Request(url, headers={"User-Agent": "TVStreamLive-GuideBuilder/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            items = (json.loads(response.read()).get("epg_list") or [])
+    except Exception as exc:
+        print(f"Warning: Error fetching epg.pw '{canonical_name}': {exc}", file=sys.stderr)
+        return []
+
+    programmes = []
+    for index, item in enumerate(items):
+        raw_start = item.get("start_date")
+        if not raw_start:
+            continue
+        try:
+            start_dt = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).astimezone(timezone.utc)
+            if index + 1 < len(items) and items[index + 1].get("start_date"):
+                raw_stop = items[index + 1]["start_date"]
+                stop_dt = datetime.fromisoformat(raw_stop.replace("Z", "+00:00")).astimezone(timezone.utc)
+            else:
+                stop_dt = start_dt + timedelta(hours=4)
+        except (TypeError, ValueError):
+            continue
+        if stop_dt < window_start or start_dt > window_end:
+            continue
+        programmes.append({
+            "title": item.get("title") or "Unknown",
+            "desc": item.get("desc") or "",
+            "start": int(start_dt.timestamp()),
+            "stop": int(stop_dt.timestamp()),
+        })
+    return programmes
 
 def main():
     now_utc = datetime.now(timezone.utc)
     window_start = now_utc - timedelta(hours=2)
     window_end = now_utc + timedelta(hours=36)
 
-    print(f"[{now_utc.isoformat()}] Fetching XMLTV feed from: {XMLTV_URL}")
-    req = urllib.request.Request(
-        XMLTV_URL,
-        headers={"User-Agent": "TVStreamLive-GuideBuilder/1.0"}
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            compressed_data = response.read()
-    except Exception as e:
-        print(f"Error fetching XMLTV feed: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"Downloaded {len(compressed_data):,} bytes. Decompressing...")
-    try:
-        decompressed_data = gzip.decompress(compressed_data)
-    except Exception:
-        decompressed_data = compressed_data
-
-    print(f"Parsing XML ({len(decompressed_data):,} bytes)...")
-
     channels_data = {k: [] for k in TARGET_CHANNELS.keys()}
-    channel_id_to_canonical = {}
+    total_programmes = 0
 
-    try:
-        import io
-        tree = ET.iterparse(io.BytesIO(decompressed_data), events=("end",))
-        programme_count = 0
+    for feed_name, feed_url in FEEDS:
+        raw_xml = fetch_feed(feed_name, feed_url)
+        if not raw_xml:
+            continue
 
-        for event, elem in tree:
-            if elem.tag == "channel":
-                ch_id = elem.attrib.get("id", "")
-                display_name = (elem.findtext("display-name") or "").lower()
+        print(f"Parsing '{feed_name}' XML ({len(raw_xml):,} bytes)...")
+        channel_id_to_canonical = {}
 
-                # Find matching canonical channel
-                for canonical, aliases in TARGET_CHANNELS.items():
-                    # We prefer national / London feeds if multiple regional variants exist
-                    if any(a in display_name for a in aliases):
-                        # Avoid clobbering an already matched London/main feed with another regional variant
-                        if canonical not in channel_id_to_canonical.values() or "london" in display_name:
-                            channel_id_to_canonical[ch_id] = canonical
-                        break
-                elem.clear()
+        try:
+            tree = ET.iterparse(io.BytesIO(raw_xml), events=("end",))
+            feed_programmes = 0
 
-            elif elem.tag == "programme":
-                ch_id = elem.attrib.get("channel", "")
-                canonical_name = channel_id_to_canonical.get(ch_id)
+            for event, elem in tree:
+                if elem.tag == "channel":
+                    ch_id = elem.attrib.get("id", "")
+                    display_name = (elem.findtext("display-name") or "").lower()
 
-                if canonical_name:
-                    start_dt = parse_xmltv_date(elem.attrib.get("start"))
-                    stop_dt = parse_xmltv_date(elem.attrib.get("stop"))
+                    for canonical, aliases in TARGET_CHANNELS.items():
+                        if any(a in display_name for a in aliases):
+                            if canonical not in channel_id_to_canonical.values() or "hd" in display_name or "london" in display_name:
+                                channel_id_to_canonical[ch_id] = canonical
+                            break
+                    elem.clear()
 
-                    if start_dt and stop_dt and stop_dt >= window_start and start_dt <= window_end:
-                        title_el = elem.find("title")
-                        desc_el = elem.find("desc")
+                elif elem.tag == "programme":
+                    ch_id = elem.attrib.get("channel", "")
+                    canonical_name = channel_id_to_canonical.get(ch_id)
 
-                        title = title_el.text.strip() if title_el is not None and title_el.text else ""
-                        desc = desc_el.text.strip() if desc_el is not None and desc_el.text else ""
+                    if canonical_name:
+                        start_dt = parse_xmltv_date(elem.attrib.get("start"))
+                        stop_dt = parse_xmltv_date(elem.attrib.get("stop"))
 
-                        if title:
-                            prog = {
-                                "title": title,
-                                "desc": desc,
-                                "start": int(start_dt.timestamp()),
-                                "stop": int(stop_dt.timestamp())
-                            }
-                            channels_data[canonical_name].append(prog)
-                            programme_count += 1
+                        if start_dt and stop_dt and stop_dt >= window_start and start_dt <= window_end:
+                            title_el = elem.find("title")
+                            desc_el = elem.find("desc")
 
-                elem.clear()
+                            title = title_el.text.strip() if title_el is not None and title_el.text else ""
+                            desc = desc_el.text.strip() if desc_el is not None and desc_el.text else ""
 
-    except Exception as e:
-        print(f"Error during XML parse: {e}", file=sys.stderr)
-        sys.exit(1)
+                            if title:
+                                prog = {
+                                    "title": title,
+                                    "desc": desc,
+                                    "start": int(start_dt.timestamp()),
+                                    "stop": int(stop_dt.timestamp())
+                                }
+                                channels_data[canonical_name].append(prog)
+                                feed_programmes += 1
+
+                    elem.clear()
+
+            print(f"Parsed {feed_programmes} programmes from '{feed_name}'.")
+            total_programmes += feed_programmes
+
+        except Exception as e:
+            print(f"Warning: Error parsing '{feed_name}': {e}", file=sys.stderr)
+
+    for canonical_name, channel_id in EPG_PW_CHANNELS.items():
+        programmes = fetch_epg_pw_channel(canonical_name, channel_id, window_start, window_end)
+        if programmes:
+            # epg.pw is authoritative for these simulcast UHD services. Replace
+            # any coincidental fuzzy XMLTV match instead of merging two feeds.
+            channels_data[canonical_name] = programmes
+            total_programmes += len(programmes)
+            print(f"Parsed {len(programmes)} programmes from epg.pw for '{canonical_name}'.")
 
     final_channels = {}
     for ch_name, progs in channels_data.items():
@@ -175,7 +272,7 @@ def main():
         json.dump(payload, f, separators=(",", ":"))
 
     file_size_kb = os.path.getsize(OUTPUT_FILE) / 1024.0
-    print(f"Generated '{OUTPUT_FILE}': {len(final_channels)} channels, {programme_count} programmes, {file_size_kb:.1f} KB")
+    print(f"Generated '{OUTPUT_FILE}': {len(final_channels)} channels, {total_programmes} programmes, {file_size_kb:.1f} KB")
 
 if __name__ == "__main__":
     main()
