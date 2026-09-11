@@ -33,6 +33,20 @@ EPG_PW_CHANNELS = {
     "sky sports uhd1": 471315,
     "sky sports uhd2": 471314,
     "tnt sports ultimate": 400476,
+    # Premier Sports 1/2 HD — no public XMLTV feed carries them; epg.pw IDs
+    # verified 2026-09-11 (current-day listings returned for both).
+    "premier sports 1": 219100,
+    "premier sports 2": 219104,
+    # Sky One (relaunched Feb 2026): OpenEPG declares it but carries no
+    # listings; epg.pw "Sky One HD" verified 2026-09-11.
+    "sky one": 524289,
+    # Same situation for these Sky Sports channels (declared, empty in
+    # OpenEPG). epg.pw lists them as "SkySp … HD"; IDs verified 2026-09-11
+    # against the week's real schedule (Solheim Cup, US Open, NFL, St Leger).
+    "sky sports golf": 12022,
+    "sky sports tennis": 212145,
+    "sky sports action": 12024,
+    "sky sports racing": 12200,
 }
 
 # Output filename
@@ -100,6 +114,45 @@ TARGET_CHANNELS = {
     # Premier Sports
     "premier sports 1": ["premier sports 1", "premier sport 1"],
     "premier sports 2": ["premier sports 2", "premier sport 2"],
+
+    # NOW TV entertainment / news / cinema / kids (keys = NowTVChannel.name
+    # lowercased, which is how ExternalEPGService.nowAndNext(name:) looks
+    # them up). Covered by OpenEPG's unitedkingdom2.xml (display names carry
+    # a ".uk" suffix and an HD twin); Freeview only has Sky Arts / Sky News.
+    # Verified 2026-09-11 that each alias matches only its own channel.
+    "sky sports news": ["sky sports news"],
+    "sky one": ["sky one"],
+    "sky atlantic": ["sky atlantic"],
+    "sky witness": ["sky witness"],
+    "u&alibi": ["u&alibi"],
+    "u&gold": ["u&gold"],
+    "sky comedy": ["sky comedy"],
+    "comedy central": ["comedy central uk", "comedy central hd"],
+    "mtv": ["mtv hd", "mtv.uk"],
+    "sky docs": ["sky documentaries", "sky docs"],
+    "sky crime": ["sky crime"],
+    "sky nature": ["sky nature"],
+    "sky history": ["sky history"],
+    "sky sci-fi": ["sky sci-fi", "sky scifi"],
+    "sky arts": ["sky arts"],
+    "sky cinema premiere": ["sky cinema premiere"],
+    "sky cinema action": ["sky cinema action"],
+    "sky cinema family": ["sky cinema family"],
+    "sky cinema comedy": ["sky cinema comedy"],
+    "sky cinema sci-fi/horror": ["sky cinema sci fi & horror", "sky cinema sci-fi & horror", "sky cinema sci-fi/horror"],
+    "sky cinema thriller": ["sky cinema thriller"],
+    "sky cinema greats": ["sky cinema greats"],
+    "sky cinema drama": ["sky cinema drama"],
+    "sky news": ["sky news"],
+    "sky kids": ["sky kids"],
+    "cartoon network": ["cartoon network"],
+    "boomerang": ["boomerang"],
+    "nickelodeon": ["nickelodeon"],
+    "nicktoons": ["nicktoons"],
+    "nick jr": ["nick jr"],
+    "cartoonito": ["cartoonito"],
+    # Not in any public XMLTV feed found so far: Sky Cinema Bridget Jones /
+    # Minions (pop-up channels). Premier Sports 1/2 come from epg.pw below.
 }
 
 def parse_xmltv_date(raw_str):
@@ -191,7 +244,20 @@ def main():
             continue
 
         print(f"Parsing '{feed_name}' XML ({len(raw_xml):,} bytes)...")
+        # Every channel element that matches a canonical name is collected
+        # (a feed usually carries an HD and an SD twin, and sometimes a
+        # regional or +1 variant); programmes are gathered per channel id
+        # and one variant is chosen at the end of the feed using the same
+        # preference as before (an HD/London variant beats the first match)
+        # but only among variants that actually carry listings. Choosing the
+        # HD id up front silently produced empty channels when a feed
+        # declared the HD twin but only populated the SD one (OpenEPG's
+        # Nickelodeon, 2026-09-11); choosing purely by listing count would
+        # pick siblings such as "E4 Extra" / "E4+1" over "E4".
         channel_id_to_canonical = {}
+        display_name_for_id = {}
+        declaration_index = {}
+        feed_channel_progs = {}   # canonical -> {ch_id: [programmes]}
 
         try:
             tree = ET.iterparse(io.BytesIO(raw_xml), events=("end",))
@@ -204,8 +270,10 @@ def main():
 
                     for canonical, aliases in TARGET_CHANNELS.items():
                         if any(a in display_name for a in aliases):
-                            if canonical not in channel_id_to_canonical.values() or "hd" in display_name or "london" in display_name:
-                                channel_id_to_canonical[ch_id] = canonical
+                            channel_id_to_canonical[ch_id] = canonical
+                            display_name_for_id[ch_id] = display_name
+                            declaration_index[ch_id] = len(declaration_index)
+                            feed_channel_progs.setdefault(canonical, {}).setdefault(ch_id, [])
                             break
                     elem.clear()
 
@@ -231,10 +299,24 @@ def main():
                                     "start": int(start_dt.timestamp()),
                                     "stop": int(stop_dt.timestamp())
                                 }
-                                channels_data[canonical_name].append(prog)
-                                feed_programmes += 1
+                                feed_channel_progs[canonical_name][ch_id].append(prog)
 
                     elem.clear()
+
+            for canonical_name, by_id in feed_channel_progs.items():
+                populated = [cid for cid in by_id if by_id[cid]]
+                if not populated:
+                    continue
+                best_id = max(
+                    populated,
+                    key=lambda cid: (
+                        "hd" in display_name_for_id.get(cid, "")
+                        or "london" in display_name_for_id.get(cid, ""),
+                        -declaration_index[cid],
+                    ),
+                )
+                channels_data[canonical_name].extend(by_id[best_id])
+                feed_programmes += len(by_id[best_id])
 
             print(f"Parsed {feed_programmes} programmes from '{feed_name}'.")
             total_programmes += feed_programmes
