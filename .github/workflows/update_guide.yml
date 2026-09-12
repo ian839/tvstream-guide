@@ -30,4 +30,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add uk_guide.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Automated daily UK guide update [skip ci]" && git push)
+          # The EPG add-on publishes events/*.json and hub_guide/*.json to this
+          # branch every few minutes via the Contents API, so main may have
+          # moved since checkout: rebase before pushing instead of failing.
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Automated daily UK guide update [skip ci]" && git pull --rebase origin main && git push)
