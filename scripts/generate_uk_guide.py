@@ -32,7 +32,9 @@ FEEDS = [
 EPG_PW_CHANNELS = {
     "sky sports uhd1": 471315,
     "sky sports uhd2": 471314,
-    "tnt sports ultimate": 400476,
+    # 400476 stopped returning listings on 2026-09-12; 463023 ("TNT Sports
+    # Ultimate HD") carries the current schedule.
+    "tnt sports ultimate": 463023,
     # Premier Sports 1/2 HD — no public XMLTV feed carries them; epg.pw IDs
     # verified 2026-09-11 (current-day listings returned for both).
     "premier sports 1": 219100,
