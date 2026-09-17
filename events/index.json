@@ -2,23 +2,23 @@
  "feeds": {
   "events/appletv.json": {
    "count": 20,
-   "updated_at": "2026-09-17T05:30:23.906209+00:00"
+   "updated_at": "2026-09-17T05:35:38.328938+00:00"
   },
   "events/disneyplus.json": {
    "count": 43,
-   "updated_at": "2026-09-17T05:30:24.840153+00:00"
+   "updated_at": "2026-09-17T05:35:40.725495+00:00"
   },
   "events/espn.json": {
    "count": 15,
-   "updated_at": "2026-09-17T05:30:26.420370+00:00"
+   "updated_at": "2026-09-17T05:35:42.911561+00:00"
   },
   "events/fox.json": {
    "count": 17,
-   "updated_at": "2026-09-17T05:30:27.432204+00:00"
+   "updated_at": "2026-09-17T05:35:43.806543+00:00"
   },
   "events/max.json": {
    "count": 13,
-   "updated_at": "2026-09-17T05:30:24.179775+00:00"
+   "updated_at": "2026-09-17T05:35:38.746220+00:00"
   },
   "events/nowtv.json": {
    "count": 0,
@@ -30,36 +30,36 @@
   },
   "events/primevideo.json": {
    "count": 5,
-   "updated_at": "2026-09-17T05:30:23.744535+00:00"
+   "updated_at": "2026-09-17T05:35:38.167451+00:00"
   },
   "events/skyshow.json": {
    "count": 70,
-   "updated_at": "2026-09-17T05:30:22.722841+00:00"
+   "updated_at": "2026-09-17T05:35:36.896347+00:00"
   },
   "events/tod.json": {
    "count": 25,
-   "updated_at": "2026-09-17T05:30:21.423718+00:00"
+   "updated_at": "2026-09-17T05:35:34.599404+00:00"
   },
   "events/usanetwork.json": {
    "count": 3,
-   "updated_at": "2026-09-17T05:30:25.387886+00:00"
+   "updated_at": "2026-09-17T05:35:41.820432+00:00"
   },
   "hub_guide/espn_channel_guide.json": {
    "count": null,
-   "updated_at": "2026-09-17T05:30:28.748114+00:00"
+   "updated_at": "2026-09-17T05:35:45.172529+00:00"
   },
   "hub_guide/espn_channel_now.json": {
    "count": null,
-   "updated_at": "2026-09-17T05:30:31.755725+00:00"
+   "updated_at": "2026-09-17T05:35:45.515982+00:00"
   },
   "hub_guide/fox_channel_guide.json": {
    "count": null,
-   "updated_at": "2026-09-17T05:30:30.091230+00:00"
+   "updated_at": "2026-09-17T05:35:45.177987+00:00"
   },
   "hub_guide/nowtv_uhd_guide.json": {
    "count": null,
    "updated_at": "2026-09-17T05:20:09.953897+00:00"
   }
  },
- "updated_at": "2026-09-17T05:30:20+00:00"
+ "updated_at": "2026-09-17T05:35:33+00:00"
 }
