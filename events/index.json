@@ -2,23 +2,23 @@
  "feeds": {
   "events/appletv.json": {
    "count": 20,
-   "updated_at": "2026-09-21T07:40:22.809798+00:00"
+   "updated_at": "2026-09-21T07:45:33.878815+00:00"
   },
   "events/disneyplus.json": {
    "count": 4,
-   "updated_at": "2026-09-21T07:40:23.768949+00:00"
+   "updated_at": "2026-09-21T07:45:34.968463+00:00"
   },
   "events/espn.json": {
    "count": 16,
-   "updated_at": "2026-09-21T07:40:25.884901+00:00"
+   "updated_at": "2026-09-21T07:45:37.037639+00:00"
   },
   "events/fox.json": {
    "count": 11,
-   "updated_at": "2026-09-21T07:40:26.495116+00:00"
+   "updated_at": "2026-09-21T07:45:37.736638+00:00"
   },
   "events/max.json": {
    "count": 11,
-   "updated_at": "2026-09-21T07:40:23.066247+00:00"
+   "updated_at": "2026-09-21T07:45:34.143244+00:00"
   },
   "events/nowtv.json": {
    "count": 0,
@@ -30,40 +30,40 @@
   },
   "events/primevideo.json": {
    "count": 6,
-   "updated_at": "2026-09-21T07:40:22.588566+00:00"
+   "updated_at": "2026-09-21T07:45:33.652250+00:00"
   },
   "events/skyshow.json": {
    "count": 21,
-   "updated_at": "2026-09-21T07:40:21.620048+00:00"
+   "updated_at": "2026-09-21T07:45:32.771569+00:00"
   },
   "events/tod.json": {
-   "count": 28,
-   "updated_at": "2026-09-21T07:40:19.385235+00:00"
+   "count": 31,
+   "updated_at": "2026-09-21T07:45:30.360257+00:00"
   },
   "events/usanetwork.json": {
    "count": 1,
-   "updated_at": "2026-09-21T07:40:24.739723+00:00"
+   "updated_at": "2026-09-21T07:45:35.929764+00:00"
   },
   "fixtures/broadcasters.json": {
    "count": 1039,
-   "updated_at": "2026-09-21T07:40:28.677880+00:00"
+   "updated_at": "2026-09-21T07:45:39.493378+00:00"
   },
   "hub_guide/espn_channel_guide.json": {
    "count": null,
-   "updated_at": "2026-09-21T07:40:27.897182+00:00"
+   "updated_at": "2026-09-21T07:45:39.055863+00:00"
   },
   "hub_guide/espn_channel_now.json": {
    "count": null,
-   "updated_at": "2026-09-21T07:40:28.242788+00:00"
+   "updated_at": "2026-09-21T07:45:39.403823+00:00"
   },
   "hub_guide/fox_channel_guide.json": {
    "count": null,
-   "updated_at": "2026-09-21T07:40:27.902208+00:00"
+   "updated_at": "2026-09-21T07:45:39.060470+00:00"
   },
   "hub_guide/nowtv_uhd_guide.json": {
    "count": null,
    "updated_at": "2026-09-21T07:35:18.331224+00:00"
   }
  },
- "updated_at": "2026-09-21T07:40:18+00:00"
+ "updated_at": "2026-09-21T07:45:29+00:00"
 }
