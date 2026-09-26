@@ -2,11 +2,11 @@
  "feeds": {
   "events/appletv.json": {
    "count": 20,
-   "updated_at": "2026-09-26T04:04:46.831800+00:00"
+   "updated_at": "2026-09-26T04:10:05.744146+00:00"
   },
   "events/disneyplus.json": {
    "count": 136,
-   "updated_at": "2026-09-26T04:04:47.834732+00:00"
+   "updated_at": "2026-09-26T04:10:06.845033+00:00"
   },
   "events/espn.json": {
    "count": 38,
@@ -14,11 +14,11 @@
   },
   "events/fox.json": {
    "count": 33,
-   "updated_at": "2026-09-26T04:04:52.559157+00:00"
+   "updated_at": "2026-09-26T04:10:35.652615+00:00"
   },
   "events/max.json": {
    "count": 27,
-   "updated_at": "2026-09-26T04:04:47.073594+00:00"
+   "updated_at": "2026-09-26T04:10:06.001611+00:00"
   },
   "events/nowtv.json": {
    "count": 0,
@@ -29,24 +29,24 @@
    "updated_at": "2026-09-25T05:00:24.166011+00:00"
   },
   "events/primevideo.json": {
-   "count": 29,
-   "updated_at": "2026-09-26T04:04:46.618058+00:00"
+   "count": 30,
+   "updated_at": "2026-09-26T04:10:04.334871+00:00"
   },
   "events/skyshow.json": {
    "count": 75,
-   "updated_at": "2026-09-26T04:04:44.460981+00:00"
+   "updated_at": "2026-09-26T04:10:03.330665+00:00"
   },
   "events/tod.json": {
    "count": 30,
-   "updated_at": "2026-09-26T04:04:43.262914+00:00"
+   "updated_at": "2026-09-26T04:10:01.044318+00:00"
   },
   "events/usanetwork.json": {
    "count": 2,
-   "updated_at": "2026-09-26T04:04:49.208960+00:00"
+   "updated_at": "2026-09-26T04:10:07.928885+00:00"
   },
   "fixtures/broadcasters.json": {
    "count": 1341,
-   "updated_at": "2026-09-26T04:04:57.621519+00:00"
+   "updated_at": "2026-09-26T04:11:20.642782+00:00"
   },
   "hub_guide/espn_channel_guide.json": {
    "count": null,
@@ -58,12 +58,12 @@
   },
   "hub_guide/fox_channel_guide.json": {
    "count": null,
-   "updated_at": "2026-09-26T04:04:54.956654+00:00"
+   "updated_at": "2026-09-26T04:11:03.820011+00:00"
   },
   "hub_guide/nowtv_uhd_guide.json": {
    "count": null,
    "updated_at": "2026-09-26T03:59:41.025847+00:00"
   }
  },
- "updated_at": "2026-09-26T04:04:42+00:00"
+ "updated_at": "2026-09-26T04:10:00+00:00"
 }
